@@ -74,3 +74,5 @@ The online microbiome analysis platform [Qiita](https://qiita.ucsd.edu/) contain
 |qiita_host_common_name|'human' repeated in all rows|
 |qiita_env_feature|'human-associated habitat' repeated in all rows|
 
+<br> *Note: Quantitative values are float types, True/False are boolean values, and all other, non-nan values are strings; Nans are float*
+<br>
