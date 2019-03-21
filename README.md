@@ -28,6 +28,7 @@ The online microbiome analysis platform [Qiita](https://qiita.ucsd.edu/) contain
 |Skin|7386|979|
 
 ## Normalized Column Headers and Descriptions
+Note: Quantitative values are float types, True/False are boolean values, and all other, non-nan values are strings; Nans are float
 |Normalized Column Header|Descriptions|
 |:-------------:|---------------|
 |qiita_host_age|normalized age in years|
