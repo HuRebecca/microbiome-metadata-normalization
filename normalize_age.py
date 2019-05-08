@@ -1,3 +1,7 @@
+import numpy as np
+import pandas as pd
+import re
+
 '''
 
 OVERALL GOALS:
@@ -9,6 +13,7 @@ REQUIREMENTS:
 -------------
 -import numpy, pandas, re
 -metadata is loaded in as df
+define age_cols and age_unit_cols
 -numerical values are numeric type and cleaned of strings (ex. no '25y', '125kg')
 
 SOME CONCERNS:
@@ -25,8 +30,8 @@ column header but its not super efficient, for example if I determine 'age_in_ye
 age unit is years, it will have to re-determine that for each row that gives the age value as 'age_in_years'
 '''
 
-age_cols = [] #add columns associated with age
-age_unit_cols = [] #add all column associated with age unit
+#age_cols = [] #add columns associated with age
+#age_unit_cols = [] #add all column associated with age unit
 
 age_unit_dict = {
                  'year': ['year', 'years', 'yr', 'yrs', 'y'],
@@ -42,6 +47,28 @@ age_unit_conversion_dict = {
                         'hour': 21900,
                         'minute': 1314000
                         }
+
+
+
+
+def clean_csv(file_name, delimeter = '\t'):
+    '''
+    reads in the csv and normalizes all variations of true and false values to bool and all variations of null values to nan
+
+    param: the filename of the csv as a string
+    return: cleaned pandas DataFrame
+    '''
+    df = pd.read_csv(file_name ,header=0, sep =delimeter, decimal = ',',
+            true_values =['true','yes','y','Yes','Y','YES', 'Self-diagnosed', 'Diagnosed by a medical professional (doctor, physician assistant)'],
+            false_values=['false','no','n','No','N','NO', 'I do not have this condition', 'I do not have this condition'],
+            na_values=['Unknown','Unspecified','no_data','not applicable', 'Not applicable' ,'Missing: not collected', 'Missing: not provided',
+                      'Missing: Not recorded', 'Missing: Restricted access' ,'Restricted access', 'Missing', 'Not provided', 'unspecified', 'MISSING: RESTRICTED ACCESS',
+                      'not collected', 'not provided', 'missing: not provided', 'MIssing: Not provided', 'Missing: Not reported'],
+            low_memory= False
+            )
+    return df
+
+
 
 
 
@@ -75,7 +102,7 @@ def fill_age_unit(column_name):
 
 
 
-def clean_age(age, age_unit):
+def clean_age(age, age_unit, min_age = 0, max_age = 120):
     # Also not sure if this would be the best way to *assume* if no age unit, then put years
     '''
     helper function that normalizes an age value to years
@@ -96,7 +123,7 @@ def clean_age(age, age_unit):
     conversion_val = age_unit_conversion_dict[age_unit]
     new_age = round(float(age) / conversion_val, 3) #ideally the age value columns would already by floats
 
-    if new_age < 120 and new_age > 0:
+    if new_age < max_age and new_age > min_age:
             return new_age
     else:
         return np.nan
@@ -135,7 +162,7 @@ def clean_age_unit(age_unit):
 
 
 
-def find_age_vals(row):
+def find_age_vals(row, age_cols, age_unit_cols):
     '''
     helper function to find age values and age unit values associated with each host/row
 
@@ -143,6 +170,10 @@ def find_age_vals(row):
     -----------
     row: pd.Series object
         a row of a DataFrame containing host metadata
+    age_cols: list
+        a list of strings that are the age related column headers in df
+    age_unit_cols: list
+       a list of strings that are the age unit related column headers in df
 
     Returns
     -----------
@@ -177,19 +208,17 @@ def find_age_vals(row):
 
 
 
-def mergenorm_age():
+def mergenorm_age(df, age_cols, age_unit_cols):
     '''
     creates a series with merged and normalized age values in 'years'
 
     Parameters
     -----------
-    none
-
-    I don't think its necessary to have params if age_cols and unit_cols are gloablly defined
-
+    df: pd.DataFrame
+        a pd.DataFrame object that contains all the metadata
     age_cols: list
         a list containing all column names (str) of columns containing numerical age data
-    unit_cols: list
+    age_unit_cols: list
         a list containing all column names (str) of columns containing age unit data
 
     Returns
@@ -198,8 +227,8 @@ def mergenorm_age():
         a pd.Series with merged age data that has been normalized to units of year
     '''
     #create a smaller df to search through
-    age_df = df[age_cols+ age_unit_cols]
+    age_df = df[age_cols + age_unit_cols]
     #make age columns numeric, ideally this wouldn't have to be done?
     age_df[age_cols] = age_df[age_cols].apply(lambda x: pd.to_numeric(x, errors = 'coerce'))
     #apply all helper function to entire df
-    return age_df.apply(find_age_vals, axis = 1)
+    return age_df.apply(lambda y: find_age_vals(y, age_cols, age_unit_cols), axis = 1)
